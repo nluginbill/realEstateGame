@@ -13,50 +13,77 @@ class RealEstateGame:
     def __init__(self):
         """Contructs a game. Takes in no parameters. Initializes an empty gameboard (a list of spaces) and an empty
         roster of players (a dictionary of players)"""
-
-        # private variables:
-        # active_players: a dictionary of active players
-        # gameboard: a list of spaces on the board
-        pass
+        self.go_bonus = 0
+        self.active_players = {}
+        self.gameboard = []
 
     def create_spaces(self, go_bonus, rents):
         """Takes in go_bonus: the amount of money players receive when landing on or passing go. Takes in rents: a
         list of the rents for 24 game spaces. The function then creates a GO space, and 24 Spaces with the given
         rents. It adds these spaces to the gameboard."""
+        # set the GO bonus
+        self.go_bonus = go_bonus
+
         # create the GO space
+        go_space = Space("GO")
+
         # add it to the list of spaces on the board, gameboard
+        self.gameboard.append(go_space)
+
         # create a list of names to give the incoming 24 spaces
-        # use a loop to create 24 spaces with the list of names and the given rents, adding each to gameboard
-        pass
+        name_list = ["United States", "Canada", "Mexico", "Panama", "Haiti", "Jamaica", "Peru", "Republic Dominican",
+                     "Cuba", "Caribbean", "Greenland", "El Salvador", "Puerto Rico", "Colombia", "Venezuela",
+                     "Honduras", "Guyana", "Guatemala", "Bolivia", "Argentina", "Ecuador", "Chile", "Brazil",
+                     "Costa Rica"]
+
+        print(len(name_list))
+
+        # create 24 spaces with the list of names and the given rents, adding each to gameboard
+        for index in range(24):
+            space = Space(name_list[index], rents[index])
+            self.gameboard.append(space)
 
     def create_player(self, name, initial_balance):
         """Takes in name: a unique name to give the new Player. If the name is not unique, the player will not be
         created, and an error will be raised. Takes in initial_balance: a number representing the amount that the
         Player starts with. Players are added to the go space, so can only be used after create_spaces(). """
         # create the player, passing the name and initial balance
-        # add the player to the list of active players
-        pass
+        player = Player(name, initial_balance)
+        # add the player to the dictionary of active players
+        self.active_players[player.name] = player
 
     def get_player_account_balance(self, player_name):
         """Takes in player_name: the name of the Player whose balance is returned. Returns their balance."""
         # return the player's balance from the dictionary
-        pass
+        player = self.active_players[player_name]
+        return player.get_balance()
 
     def get_player_current_position(self, player_name):
         """Takes in player_name: the name of the Player whose position on the board is returned. Returns their position.
         """
         # in the active_players dictionary, look up the location of the given player_name, and return it
-        pass
+        player = self.active_players[player_name]
+        return player.get_location()
 
     def buy_space(self, player_name):
         """Takes in player_name. If the player named is located on a Space that does not already have an owner, and
         the player has more money in their account than the purchase_price of the Space then: The purchase_price is
         subtracted from the player's account, and the player is set as the owner of the space they're located at.
         Returns true Space is bought, and false if not."""
+
+        player = self.active_players[player_name]
         # look up the player's location
-        # check if that location has an owner
-        # check if the player's balance is not less than the purchase price
-        pass
+        location = self.gameboard[player.get_location()]
+        can_afford = player.get_balance() > location.get_purchase_price()
+        is_go_space = location == self.gameboard[0]
+        # check if that location has an owner and can afford the purchase (and that it's not the GO space)
+        if location.get_owner() is None and can_afford and not is_go_space:
+            location.change_owner(player.get_name())
+            balance = player.get_balance()
+            new_balance = balance - location.get_purchase_price()
+            player.set_balance(new_balance)
+            return True
+        return False
 
     def move_player(self, player_name, distance):
         """Takes in player_name. Also takes in distance: an integer between 1 and 6. If the player's balance is 0, the
@@ -67,16 +94,58 @@ class RealEstateGame:
         player's account balance, and moved to the owner's balance. If the rent payer's balance reaches 0, that player
         is removed from the active_players dictionary, and only their remaining balance will be transferred to the
         owner."""
+
+        player = self.active_players[player_name]
+
         # if player account balance 0, return
-        # add the distance to be moved to the player's location, looping around to 0 at 24
+        balance = player.get_balance()
+        if balance <= 0:
+            return
+
+        # add the distance to be moved to the player's location, looping  around to 0 at 24
         # if looping around (passing/landing on GO) occurs, reward go_bonus
+        new_location = player.get_location() + distance
+        if new_location > 24:
+            # reward go_bonus
+            player.set_balance(balance + self.go_bonus)
+            new_location -= 25
+        player.set_location(new_location)
+
         # check the Space at that location, check if rent needs to be paid
+        location = self.gameboard[new_location]
+        owner = self.gameboard[new_location].get_owner()
+        if owner is not None and owner != player.get_name(): # if rent needs to be paid
+            if balance > location.get_rent():  # if the rent payer has enough money
+                # get the owner's current balance, add the rent to it, and set the new balance for the owner
+                owner_balance = self.active_players[owner].get_balance()
+                new_owner_balance = owner_balance + location.get_rent()
+                self.active_players[owner].set_balance(new_owner_balance)
+            else:
+                # put what remains in the moving player's account into the location owner's account
+                owner_balance = self.active_players[owner].get_balance()
+                new_owner_balance = owner_balance + balance
+                self.active_players[owner].set_balance(new_owner_balance)
+
+                # the only case where the game can end is when someone has to pay rent but can't cover it
+                # so we check here
+                self.check_game_over()
 
     def check_game_over(self):
         """Checks if the game is over. The game is over if all of the players but one have an account balance of 0.
         If the game is over, the winning player's name is returned. If the game is not over, an empty string is
         returned."""
         # loop through active_players dictionary, and see if there is only 1 player with a positive account balance
+        game_over = False
+        positive_balance_count = 0
+        winner = ""
+        for player in self.active_players.values():
+            if player.get_balance() > 0:
+                positive_balance_count += 1
+                winner = player.get_name()
+
+        if positive_balance_count < 2:
+            return winner
+        return ""
         # if so, return the name of that player
         # else, return empty string ""
 
@@ -88,33 +157,33 @@ class Player:
     def __init__(self, name, balance):
         """Constructs a player for the game. Names the player and gives the player a starting balance with arguments.
         Location is an integer that points to the Space on the gameboard. It starts at 0, or the GO space."""
-
-        # private variables:
-        # name
-        # balance
-        # location
-        pass
+        self.name = name
+        self.balance = balance
+        self.location = 0
 
     def get_name(self):
         """return the Player name"""
-        pass
+        return self.name
 
     def get_balance(self):
         """return the Player's balance"""
-        pass
+        return self.balance
 
-    def set_balance(self):
+    def set_balance(self, new_balance):
         """change the balance"""
-        pass
+        self.balance = new_balance
 
     def get_location(self):
         """return the location (an integer between 0 and 24)"""
-        pass
+        return self.location
 
-    def move(self):
+    def set_location(self, new_location):
         """change the location property to be an integer between 0 and 24"""
-        # add the given number to the Player's location, circling around to 0 at 24
-        pass
+        # set the Player's location
+        self.location = new_location
+
+    def __str__(self):
+        return f"Hi! I'm {self.name}. I'm on space {self.location}. I have ${self.balance}."
 
 
 class Space:
@@ -125,28 +194,31 @@ class Space:
     def __init__(self, name, rent=0):
         """Constructs a Space for the gameboard. A Space is initialized with a given name and rent. It also has an owner
         property. Rent parameter defaults to 0 so that GO space is created just by sending the name 'GO'."""
-
-        # private variables:
-        # name
-        # rent
-        # purchase_price: rent * 5
-        # owner: (Player), starts as None
+        self.name = name
+        self.rent = rent
+        self.purchase_price = rent * 5
+        self.owner = None
 
     def get_name(self):
         """returns Space's name"""
-        pass
+        return self.name
 
     def get_rent(self):
         """returns Space's rent"""
-        pass
+        return self.rent
+
+    def get_purchase_price(self):
+        """returns Space's purchase price"""
+        return self.purchase_price
 
     def get_owner(self):
         """returns Space's owner (Player)"""
-        pass
+        return self.owner
 
     def change_owner(self, purchaser):
-        """replaces the owner with the given purchaser (Player)"""
-        pass
+        """replaces the owner with the given purchaser (player name)"""
+        self.owner = purchaser
+
 
 """
 DETAILED TEXT DESCRIPTIONS OF HOW TO HANDLE THE SCENARIOS
