@@ -36,8 +36,6 @@ class RealEstateGame:
                      "Honduras", "Guyana", "Guatemala", "Bolivia", "Argentina", "Ecuador", "Chile", "Brazil",
                      "Costa Rica"]
 
-        print(len(name_list))
-
         # create 24 spaces with the list of names and the given rents, adding each to gameboard
         for index in range(24):
             space = Space(name_list[index], rents[index])
