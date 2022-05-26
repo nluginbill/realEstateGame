@@ -135,7 +135,6 @@ class RealEstateGame:
         If the game is over, the winning player's name is returned. If the game is not over, an empty string is
         returned."""
         # loop through active_players dictionary, and see if there is only 1 player with a positive account balance
-        game_over = False
         positive_balance_count = 0
         winner = ""
         for player in self.active_players.values():
@@ -146,8 +145,6 @@ class RealEstateGame:
         if positive_balance_count < 2:
             return winner
         return ""
-        # if so, return the name of that player
-        # else, return empty string ""
 
 
 class Player:

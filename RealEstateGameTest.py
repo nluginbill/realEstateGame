@@ -4,6 +4,7 @@
 # Description: Contains test cases for RealEstateGame.py
 
 import unittest
+import random
 from RealEstateGame import RealEstateGame, Player, Space
 
 
@@ -21,14 +22,21 @@ class UnitTest(unittest.TestCase):
         game.create_player("Player 2", 1000)
         game.create_player("Player 3", 1000)
 
-        game.move_player("Player 1", 6)
-        game.buy_space("Player 1")
-        game.move_player("Player 2", 6)
+        turn = 1
+        while game.check_game_over() == "" and turn < 15:
+            for player in game.active_players.values():
+                game.move_player(player.get_name(), random.randint(1, 6))
+                buy = random.choice([True, False])
+                print(player)
+                if buy:
+                    print(f"And I'm buying {game.gameboard[player.get_location()].get_name()}")
+                    game.buy_space(player.get_name())
+            turn += 1
 
-        print(game.get_player_account_balance("Player 1"))
-        print(game.get_player_account_balance("Player 2"))
 
-        print(game.check_game_over())
+
+
+
 
 
 test = UnitTest()
