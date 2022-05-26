@@ -78,10 +78,10 @@ class RealEstateGame:
         is_go_space = location == self.gameboard[0]
         # check if that location has an owner and can afford the purchase (and that it's not the GO space)
         if location.get_owner() is None and can_afford and not is_go_space:
-            location.change_owner(player.get_name())
+            self.gameboard[player.get_location()].change_owner(player.get_name())
             balance = player.get_balance()
             new_balance = balance - location.get_purchase_price()
-            player.set_balance(new_balance)
+            self.active_players[player.get_name()].set_balance(new_balance)
             return True
         return False
 
@@ -120,11 +120,23 @@ class RealEstateGame:
                 owner_balance = self.active_players[owner].get_balance()
                 new_owner_balance = owner_balance + location.get_rent()
                 self.active_players[owner].set_balance(new_owner_balance)
+
+                # deduct the rent from the moving player's balance
+                balance -= location.get_rent()
+                self.active_players[player_name].set_balance(balance)
             else:
                 # put what remains in the moving player's account into the location owner's account
                 owner_balance = self.active_players[owner].get_balance()
-                new_owner_balance = owner_balance + balance
-                self.active_players[owner].set_balance(new_owner_balance)
+                owner_balance += balance
+                self.active_players[owner].set_balance(owner_balance)
+
+                # set moving player's balance to 0
+                self.active_players[player_name].set_balance(0)
+
+                # any properties that this player owned, set their owner value to None
+                for space in self.gameboard:
+                    if space.get_owner() == player.get_name():
+                        space.change_owner(None)
 
                 # the only case where the game can end is when someone has to pay rent but can't cover it
                 # so we check here
@@ -193,7 +205,7 @@ class Space:
         property. Rent parameter defaults to 0 so that GO space is created just by sending the name 'GO'."""
         self.name = name
         self.rent = rent
-        self.purchase_price = rent * 5
+        self.purchase_price = rent * 6
         self.owner = None
 
     def get_name(self):
