@@ -205,7 +205,7 @@ class Space:
         property. Rent parameter defaults to 0 so that GO space is created just by sending the name 'GO'."""
         self.name = name
         self.rent = rent
-        self.purchase_price = rent * 6
+        self.purchase_price = rent * 5
         self.owner = None
 
     def get_name(self):

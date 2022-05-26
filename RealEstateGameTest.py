@@ -43,6 +43,8 @@ class UnitTest(unittest.TestCase):
         print(f"The winner is {game.check_game_over()}")
         print("game over")
 
+    def move_player_six_spaces_etc(self):
+
 
 test = UnitTest()
 test.just_messin()
