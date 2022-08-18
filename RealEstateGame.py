@@ -1,7 +1,4 @@
-# Author: Nathaniel Luginbill
-# GitHub username: nluginbill
-# Date: 5/24/2022
-# Description:
+import random
 
 class RealEstateGame:
     """A class that creates a RealEstateGame object. The game mimics Monopoly. It is for 2 or more players. The game has
@@ -11,24 +8,31 @@ class RealEstateGame:
     player with money wins."""
 
     def __init__(self):
-        """Contructs a game. Takes in no parameters. Initializes an empty gameboard (a list of spaces) and an empty
+        """Constructs a game. Takes in no parameters. Initializes an empty gameboard (a list of spaces) and an empty
         roster of players (a dictionary of players)"""
-        self.go_bonus = 0
-        self.active_players = {}
-        self.gameboard = []
+        self._go_bonus = 0
+        self._active_players = {}
+        self._turn_list = []
+        self._gameboard = []
+        self._turns = 0
+        self._started = False
+
+    def get_turns(self):
+        """Returns how many turns have been played"""
+        return self._turns
 
     def create_spaces(self, go_bonus, rents):
         """Takes in go_bonus: the amount of money players receive when landing on or passing go. Takes in rents: a
         list of the rents for 24 game spaces. The function then creates a GO space, and 24 Spaces with the given
         rents. It adds these spaces to the gameboard."""
         # set the GO bonus
-        self.go_bonus = go_bonus
+        self._go_bonus = go_bonus
 
         # create the GO space
         go_space = Space("GO")
 
         # add it to the list of spaces on the board, gameboard
-        self.gameboard.append(go_space)
+        self._gameboard.append(go_space)
 
         # create a list of names to give the incoming 24 spaces
         name_list = ["United States", "Canada", "Mexico", "Panama", "Haiti", "Jamaica", "Peru", "Republic Dominican",
@@ -39,7 +43,11 @@ class RealEstateGame:
         # create 24 spaces with the list of names and the given rents, adding each to gameboard
         for index in range(24):
             space = Space(name_list[index], rents[index])
-            self.gameboard.append(space)
+            self._gameboard.append(space)
+
+    def get_player(self, name):
+        if name in self._active_players:
+            return self._active_players[name]
 
     def create_player(self, name, initial_balance):
         """Takes in name: a unique name to give the new Player. If the name is not unique, the player will not be
@@ -48,19 +56,20 @@ class RealEstateGame:
         # create the player, passing the name and initial balance
         player = Player(name, initial_balance)
         # add the player to the dictionary of active players
-        self.active_players[player.name] = player
+        self._active_players[player.get_name()] = player
+        self._turn_list.append(player.get_name())
 
     def get_player_account_balance(self, player_name):
         """Takes in player_name: the name of the Player whose balance is returned. Returns their balance."""
         # return the player's balance from the dictionary
-        player = self.active_players[player_name]
+        player = self._active_players[player_name]
         return player.get_balance()
 
     def get_player_current_position(self, player_name):
         """Takes in player_name: the name of the Player whose position on the board is returned. Returns their position.
         """
         # in the active_players dictionary, look up the location of the given player_name, and return it
-        player = self.active_players[player_name]
+        player = self._active_players[player_name]
         return player.get_location()
 
     def buy_space(self, player_name):
@@ -69,17 +78,20 @@ class RealEstateGame:
         subtracted from the player's account, and the player is set as the owner of the space they're located at.
         Returns true Space is bought, and false if not."""
 
-        player = self.active_players[player_name]
+        player = self._active_players[player_name]
+
         # look up the player's location
-        location = self.gameboard[player.get_location()]
+        location = self._gameboard[player.get_location()]
+        # whether player can afford space's purchase_price
         can_afford = player.get_balance() > location.get_purchase_price()
-        is_go_space = location == self.gameboard[0]
+        # whether they're on the go space
+        is_go_space = location == self._gameboard[0]
         # check if that location has an owner and can afford the purchase (and that it's not the GO space)
         if location.get_owner() is None and can_afford and not is_go_space:
-            self.gameboard[player.get_location()].change_owner(player.get_name())
+            self._gameboard[player.get_location()].change_owner(player.get_name())
             balance = player.get_balance()
             new_balance = balance - location.get_purchase_price()
-            self.active_players[player.get_name()].set_balance(new_balance)
+            self._active_players[player.get_name()].set_balance(new_balance)
             return True
         return False
 
@@ -93,7 +105,7 @@ class RealEstateGame:
         is removed from the active_players dictionary, and only their remaining balance will be transferred to the
         owner."""
 
-        player = self.active_players[player_name]
+        player = self._active_players[player_name]
 
         # if player account balance 0, return
         balance = player.get_balance()
@@ -105,34 +117,34 @@ class RealEstateGame:
         new_location = player.get_location() + distance
         if new_location > 24:
             # reward go_bonus
-            player.set_balance(balance + self.go_bonus)
+            player.set_balance(balance + self._go_bonus)
             new_location -= 25
         player.set_location(new_location)
 
         # check the Space at that location, check if rent needs to be paid
-        location = self.gameboard[new_location]
-        owner = self.gameboard[new_location].get_owner()
+        location = self._gameboard[new_location]
+        owner = self._gameboard[new_location].get_owner()
         if owner is not None and owner != player.get_name(): # if rent needs to be paid
             if balance > location.get_rent():  # if the rent payer has enough money
                 # get the owner's current balance, add the rent to it, and set the new balance for the owner
-                owner_balance = self.active_players[owner].get_balance()
+                owner_balance = self._active_players[owner].get_balance()
                 new_owner_balance = owner_balance + location.get_rent()
-                self.active_players[owner].set_balance(new_owner_balance)
+                self._active_players[owner].set_balance(new_owner_balance)
 
                 # deduct the rent from the moving player's balance
                 balance -= location.get_rent()
-                self.active_players[player_name].set_balance(balance)
+                self._active_players[player_name].set_balance(balance)
             else:
                 # put what remains in the moving player's account into the location owner's account
-                owner_balance = self.active_players[owner].get_balance()
+                owner_balance = self._active_players[owner].get_balance()
                 owner_balance += balance
-                self.active_players[owner].set_balance(owner_balance)
+                self._active_players[owner].set_balance(owner_balance)
 
                 # set moving player's balance to 0
-                self.active_players[player_name].set_balance(0)
+                self._active_players[player_name].set_balance(0)
 
                 # any properties that this player owned, set their owner value to None
-                for space in self.gameboard:
+                for space in self._gameboard:
                     if space.get_owner() == player.get_name():
                         space.change_owner(None)
 
@@ -147,7 +159,7 @@ class RealEstateGame:
         # loop through active_players dictionary, and see if there is only 1 player with a positive account balance
         positive_balance_count = 0
         winner = ""
-        for player in self.active_players.values():
+        for player in self._active_players.values():
             if player.get_balance() > 0:
                 positive_balance_count += 1
                 winner = player.get_name()
@@ -155,6 +167,21 @@ class RealEstateGame:
         if positive_balance_count < 2:
             return winner
         return ""
+
+    def check_created(self):
+        return len(self._gameboard) > 0
+
+    def check_started(self):
+        """Checks if the game has been started (i.e., gameboard initialized, at least 2 players)"""
+        return self._started
+
+    def set_started(self):
+        """Start the game"""
+        self._started = True
+
+    def get_active_player(self):
+        """Returns the player whose turn it is"""
+        return self._turn_list[self._turns % len(self._turn_list)]
 
 
 class Player:
@@ -164,33 +191,39 @@ class Player:
     def __init__(self, name, balance):
         """Constructs a player for the game. Names the player and gives the player a starting balance with arguments.
         Location is an integer that points to the Space on the gameboard. It starts at 0, or the GO space."""
-        self.name = name
-        self.balance = balance
-        self.location = 0
+        self._name = name
+        self._balance = balance
+        self._location = 0
 
     def get_name(self):
         """return the Player name"""
-        return self.name
+        return self._name
 
     def get_balance(self):
         """return the Player's balance"""
-        return self.balance
+        return self._balance
 
     def set_balance(self, new_balance):
         """change the balance"""
-        self.balance = new_balance
+        self._balance = new_balance
 
     def get_location(self):
         """return the location (an integer between 0 and 24)"""
-        return self.location
+        return self._location
 
     def set_location(self, new_location):
         """change the location property to be an integer between 0 and 24"""
         # set the Player's location
-        self.location = new_location
+        self._location = new_location
+
+    def roll_dice(self) -> (int, int):
+        """rolls 2 six-sided dice, returning the results in a tuple"""
+        die1 = random.randint(1, 6)
+        die2 = random.randint(1, 6)
+        return die1, die2
 
     def __str__(self):
-        return f"Hi! I'm {self.name}. I'm on space {self.location}. I have ${self.balance}."
+        return f"Hi! I'm {self._name}. I'm on space {self._location}. I have ${self._balance}."
 
 
 class Space:
@@ -201,22 +234,22 @@ class Space:
     def __init__(self, name, rent=0):
         """Constructs a Space for the gameboard. A Space is initialized with a given name and rent. It also has an owner
         property. Rent parameter defaults to 0 so that GO space is created just by sending the name 'GO'."""
-        self.name = name
-        self.rent = rent
-        self.purchase_price = rent * 5
-        self.owner = None
+        self._name = name
+        self._rent = rent
+        self._purchase_price = rent * 5
+        self._owner = None
 
     def get_name(self):
         """returns Space's name"""
-        return self.name
+        return self._name
 
     def get_rent(self):
         """returns Space's rent"""
-        return self.rent
+        return self._rent
 
     def get_purchase_price(self):
         """returns Space's purchase price"""
-        return self.purchase_price
+        return self._purchase_price
 
     def get_owner(self):
         """returns Space's owner (Player)"""
@@ -224,7 +257,7 @@ class Space:
 
     def change_owner(self, purchaser):
         """replaces the owner with the given purchaser (player name)"""
-        self.owner = purchaser
+        self._owner = purchaser
 
 
 """
@@ -240,7 +273,7 @@ Player objects as the values.
 will first create the GO space, which will be named GO, and have None for rent. Then it will loop through the given
 list of rents, and create named spaces with those given rents. Then it will add the GO space, and the rest of the 
 gameboard spaces, to the gameboard list. The players will be created by create_players(). Player objects track their
-position with 'location'. When they are initialized, the Player location is set to 0, or the GO space. The created
+position with 'location'. When they are initialized, the Player locat ion is set to 0, or the GO space. The created
 players are added to the active_players list.
 
 3. Determining how to implement player piece movement
