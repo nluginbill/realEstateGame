@@ -78,8 +78,9 @@ async def add_bot(ctx, bot_name):
 async def begin_game(ctx):
     game.set_started()
     player_going_first = game.get_active_player()
+    game.set_interaction_phase(player_going_first, 'roll')
     await ctx.channel.send(f"The game has begun! It is {player_going_first}'s turn first." + "\n" \
-                           + "Type !roll to play your turn")
+                           + "Type !roll to play your turn.")
 
 
 @bot.command()
@@ -94,15 +95,23 @@ async def roll(ctx, bot_player=None):
     if game_started:
         if users_turn:
             player = game.get_player(user)
+            players_old_balance = player.get_balance()
             dice_roll = player.roll_dice()           # a tuple of two die rolls
-            msg = f"{user} rolled a {dice_roll[0]} and a {dice_roll[1]}\n"
+            msg = f"{user} rolled a {dice_roll[0]} and a {dice_roll[1]}.\n"
             pair = dice_roll[0] == dice_roll[1]
             if pair:
                 msg += f"That's a pair! {user} will go again.\n"
-            game.move_player(user, dice_roll[0] + dice_roll[1])
+            location = game.move_player(user, dice_roll[0] + dice_roll[1])
+            if players_old_balance > player.get_balance:
+                rent = players_old_balance - player.get_balance()
+                msg += f"{user} pays {rent} to {location.get_owner()}."
+
+
             msg = ""
         else:
-            msg = "It is " + game.get_active_player() + "'s turn"
+            msg = "It is " + game.get_active_player() + "'s turn."
+    else:
+        msg = "Game has not begun."
 
 
 

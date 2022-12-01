@@ -15,6 +15,7 @@ class RealEstateGame:
         self._turn_list = []
         self._gameboard = []
         self._turns = 0
+        self._interaction_phase = "setup"
         self._started = False
 
     def get_turns(self):
@@ -151,6 +152,10 @@ class RealEstateGame:
                 # the only case where the game can end is when someone has to pay rent but can't cover it
                 # so we check here
                 self.check_game_over()
+        # if no one owns it, set interaction_phase
+        elif owner is None:
+            self._interaction_phase = player, 'buy'
+            return location
 
     def check_game_over(self):
         """Checks if the game is over. The game is over if all of the players but one have an account balance of 0.
@@ -182,6 +187,10 @@ class RealEstateGame:
     def get_active_player(self):
         """Returns the player whose turn it is"""
         return self._turn_list[self._turns % len(self._turn_list)]
+
+    def set_interaction_phase(self, player, phase):
+        """Updates the interaction phase of the game"""
+        self._interaction_phase = player, phase
 
 
 class Player:
